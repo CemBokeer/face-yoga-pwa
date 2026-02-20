@@ -17,7 +17,11 @@ async function postJSON<T>(url: string, body: Record<string, unknown>): Promise<
   });
   const payload = await response.json();
   if (!response.ok) {
-    throw new Error(payload.error ?? "Request failed");
+    const detail =
+      payload && typeof payload.details === "string" && payload.details.length > 0
+        ? ` Details: ${payload.details}`
+        : "";
+    throw new Error((payload.error ?? "Request failed") + detail);
   }
   return payload as T;
 }
