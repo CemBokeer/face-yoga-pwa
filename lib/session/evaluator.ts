@@ -59,7 +59,7 @@ export function evaluateMovementFrame(
   }
 
   let statusColor: StatusColor = "green";
-  if (confidence < 0.45) {
+  if (confidence < 0.35) {
     statusColor = "yellow";
     if (!errors.includes("Olcum guveni dusuk.")) {
       errors.push("Olcum guveni dusuk.");
