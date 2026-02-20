@@ -45,7 +45,12 @@ export function evaluateMovementFrame(
     input.movement.targetMax,
     input.previousStatus,
   );
-  const confidence = clamp((input.quality.overall + input.quality.blurScore) / 2);
+  const confidence = clamp(
+    Math.max(
+      input.quality.overall * 0.85 + input.quality.blurScore * 0.15,
+      input.quality.overall * 0.75,
+    ),
+  );
 
   const phase = nextSessionPhase({
     previousPhase: input.previousPhase,
@@ -59,7 +64,7 @@ export function evaluateMovementFrame(
   }
 
   let statusColor: StatusColor = "green";
-  if (confidence < 0.35) {
+  if (confidence < 0.28) {
     statusColor = "yellow";
     if (!errors.includes("Olcum guveni dusuk.")) {
       errors.push("Olcum guveni dusuk.");

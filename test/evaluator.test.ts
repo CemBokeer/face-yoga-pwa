@@ -32,12 +32,12 @@ test("evaluator returns green when value in range and quality high", () => {
 
 test("evaluator returns yellow on low confidence", () => {
   const quality = evaluateQuality({
-    brightness: 0.2,
-    blur: 0.1,
-    faceCoverage: 0.08,
-    headYawDeg: 25,
-    occlusion: 0.8,
-    fps: 6,
+    brightness: 0.05,
+    blur: 0.01,
+    faceCoverage: 0.02,
+    headYawDeg: 30,
+    occlusion: 0.9,
+    fps: 4,
   });
 
   const frame = evaluateMovementFrame({
