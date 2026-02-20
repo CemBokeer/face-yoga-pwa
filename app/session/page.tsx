@@ -57,14 +57,18 @@ export default function SessionPage() {
     if (!sessionId) {
       return;
     }
-    const metrics = await endSessionRequest({ sessionId });
-    setSummary(
-      `Sure ${metrics.durationSec}s, completion ${Math.round(
-        metrics.completionRate * 100,
-      )}%, consistency ${Math.round(metrics.consistency * 100)}%.`,
-    );
-    setSessionId(null);
-    setStatusMessage("Seans tamamlandi.");
+    try {
+      const metrics = await endSessionRequest({ sessionId });
+      setSummary(
+        `Sure ${metrics.durationSec}s, completion ${Math.round(
+          metrics.completionRate * 100,
+        )}%, consistency ${Math.round(metrics.consistency * 100)}%.`,
+      );
+      setSessionId(null);
+      setStatusMessage("Seans tamamlandi.");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Seans bitirme hatasi.");
+    }
   };
 
   return (

@@ -50,15 +50,19 @@ export default function OnboardingPage() {
     if (!calibrationId) {
       return;
     }
-    const profile = await completeCalibrationRequest({ calibrationId });
-    setIsRunning(false);
-    setCalibrationId(null);
-    setStatus("Kalibrasyon tamamlandi.");
-    setProfileSummary(
-      `Ortalama kalite ${Math.round(
-        profile.qualityStats.averageScore * 100,
-      )}/100, oneri sure ${profile.qualityStats.recommendedDurationSec} sn.`,
-    );
+    try {
+      const profile = await completeCalibrationRequest({ calibrationId });
+      setIsRunning(false);
+      setCalibrationId(null);
+      setStatus("Kalibrasyon tamamlandi.");
+      setProfileSummary(
+        `Ortalama kalite ${Math.round(
+          profile.qualityStats.averageScore * 100,
+        )}/100, oneri sure ${profile.qualityStats.recommendedDurationSec} sn.`,
+      );
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Kalibrasyon hatasi.");
+    }
   };
 
   return (
