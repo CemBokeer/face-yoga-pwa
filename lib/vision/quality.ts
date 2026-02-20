@@ -33,7 +33,7 @@ export function evaluateQuality(input: QualityInput): QualityScore {
   if (brightnessScore < 0.45) {
     reasons.push("Isigi duzeltin.");
   }
-  if (blurScore < 0.35) {
+  if (blurScore < 0.22 && brightnessScore > 0.35) {
     reasons.push("Kamerayi sabitleyin.");
   }
   if (coverageScore < 0.45) {
