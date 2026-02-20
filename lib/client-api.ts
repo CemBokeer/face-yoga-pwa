@@ -1,33 +1,110 @@
 "use client";
 
+import { getAccessToken } from "@/lib/auth/token";
 import type {
   CalibrationProfile,
   FrameEvaluation,
   QualityInput,
+  SessionRecord,
   SessionMetrics,
   SessionPhase,
   StatusColor,
 } from "@/lib/domain/types";
 
+interface RequestErrorPayload {
+  error?: string;
+  details?: string;
+}
+
+interface AuthResponse {
+  accessToken: string | null;
+  refreshToken: string | null;
+  user: { id: string; email: string } | null;
+  requiresEmailConfirmation?: boolean;
+}
+
+function authHeaders(includeAuth = true): HeadersInit {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  if (includeAuth) {
+    const token = getAccessToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return headers;
+}
+
+function toError(payload: RequestErrorPayload): Error {
+  const detail =
+    payload && typeof payload.details === "string" && payload.details.length > 0
+      ? ` Details: ${payload.details}`
+      : "";
+  return new Error((payload.error ?? "Request failed") + detail);
+}
+
 async function postJSON<T>(url: string, body: Record<string, unknown>): Promise<T> {
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(true),
     body: JSON.stringify(body),
   });
-  const payload = await response.json();
+  const payload = (await response.json()) as RequestErrorPayload & T;
   if (!response.ok) {
-    const detail =
-      payload && typeof payload.details === "string" && payload.details.length > 0
-        ? ` Details: ${payload.details}`
-        : "";
-    throw new Error((payload.error ?? "Request failed") + detail);
+    throw toError(payload);
   }
   return payload as T;
 }
 
+async function postPublicJSON<T>(
+  url: string,
+  body: Record<string, unknown>,
+): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: authHeaders(false),
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json()) as RequestErrorPayload & T;
+  if (!response.ok) {
+    throw toError(payload);
+  }
+  return payload as T;
+}
+
+async function getJSON<T>(url: string): Promise<T> {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: authHeaders(true),
+    cache: "no-store",
+  });
+  const payload = (await response.json()) as RequestErrorPayload & T;
+  if (!response.ok) {
+    throw toError(payload);
+  }
+  return payload as T;
+}
+
+export async function signupRequest(input: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  return postPublicJSON("/api/auth/signup", input);
+}
+
+export async function loginRequest(input: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  return postPublicJSON("/api/auth/login", input);
+}
+
+export async function meRequest(): Promise<{ user: { id: string; email: string | null } }> {
+  return getJSON("/api/auth/me");
+}
+
 export async function startCalibrationRequest(input: {
-  userId: string;
   deviceProfile: {
     platform: string;
     userAgent: string;
@@ -53,7 +130,6 @@ export async function completeCalibrationRequest(input: {
 }
 
 export async function startSessionRequest(input: {
-  userId: string;
   movementIds: string[];
 }): Promise<{ sessionId: string }> {
   return postJSON("/api/session/start", input);
@@ -61,7 +137,6 @@ export async function startSessionRequest(input: {
 
 export async function frameEvalRequest(input: {
   sessionId: string;
-  userId: string;
   movementId: string;
   quality: QualityInput;
   expressionProxy: number;
@@ -76,4 +151,18 @@ export async function endSessionRequest(input: {
   sessionId: string;
 }): Promise<SessionMetrics> {
   return postJSON("/api/session/end", input);
+}
+
+export async function historySessionsRequest(): Promise<{ sessions: SessionRecord[] }> {
+  return getJSON("/api/history/sessions");
+}
+
+export async function historyMovementsRequest(): Promise<{
+  movements: Array<{
+    movementId: string;
+    sessions: number;
+    averageAccuracy: number;
+  }>;
+}> {
+  return getJSON("/api/history/movements");
 }

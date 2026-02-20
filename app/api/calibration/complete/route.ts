@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 
 import { badRequest, isRecord, readJson } from "@/lib/server/http";
 import { asString } from "@/lib/server/parsers";
+import { requireAuthenticatedUser } from "@/lib/server/auth";
 import { completeCalibration } from "@/lib/server/store";
 import { isSupabaseConfigured, persistCalibrationProfile } from "@/lib/server/supabase-rest";
 
 export async function POST(request: Request) {
+  const auth = await requireAuthenticatedUser(request);
+  if (auth.response) {
+    return auth.response;
+  }
+
   const payload = await readJson(request);
   if (!isRecord(payload)) {
     return badRequest("Invalid request body.");
@@ -16,7 +22,7 @@ export async function POST(request: Request) {
     return badRequest("calibrationId is required.");
   }
 
-  const profile = completeCalibration(calibrationId);
+  const profile = completeCalibration(calibrationId, auth.user.id);
   if (!profile) {
     return NextResponse.json({ error: "Calibration not found." }, { status: 404 });
   }

@@ -18,7 +18,16 @@ export default function Home() {
           </p>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-4">
+          <Link
+            className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md"
+            href="/auth"
+          >
+            <h2 className="text-lg font-semibold">0. Giris / Kayit</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Supabase Auth ile kimlik dogrulama.
+            </p>
+          </Link>
           <Link
             className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md"
             href="/onboarding"

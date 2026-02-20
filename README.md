@@ -2,6 +2,7 @@
 
 Mobile-first face yoga coaching with:
 
+1. Supabase Auth (email/password login)
 1. Camera quality gate (light/blur/distance/yaw/fps checks)
 2. Adaptive calibration (90-180 sec)
 3. Real-time feedback (green/red/yellow + audio cue)
@@ -52,5 +53,5 @@ Follow `docs/ops/supabase-setup.md`.
 - Face detection currently uses browser `FaceDetector` when available.
 - Session evaluation uses normalized expression proxy + quality confidence.
 - Reference video in session page is a placeholder URL; replace with expert clips.
-- API persistence is currently in-memory store abstraction, with SQL schema prepared for Supabase migration.
+- Auth flow lives at `/auth`; API routes now require bearer token.
 - If Supabase env vars are defined, calibration/session/history endpoints persist and read from DB.

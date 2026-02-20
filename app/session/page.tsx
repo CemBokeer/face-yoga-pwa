@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
 import { QualityCamera } from "@/components/camera/quality-camera";
+import { getAccessToken } from "@/lib/auth/token";
 import { MOVEMENTS } from "@/lib/domain/movements";
 import type { SessionPhase, StatusColor } from "@/lib/domain/types";
 import {
@@ -10,7 +12,6 @@ import {
   frameEvalRequest,
   startSessionRequest,
 } from "@/lib/client-api";
-import { getOrCreateUserId } from "@/lib/client-user";
 import { speakFeedback } from "@/lib/session/audio";
 
 const movement = MOVEMENTS[0];
@@ -28,6 +29,7 @@ export default function SessionPage() {
   const frameThrottleRef = useRef(0);
   const holdProgressRef = useRef(0);
   const speechThrottleRef = useRef(0);
+  const isAuthenticated = !!getAccessToken();
 
   const statusColorClass = useMemo(() => {
     if (statusColor === "green") {
@@ -40,9 +42,11 @@ export default function SessionPage() {
   }, [statusColor]);
 
   const startSession = async () => {
-    const userId = getOrCreateUserId();
+    if (!isAuthenticated) {
+      setStatusMessage("Devam etmek icin once giris yapin.");
+      return;
+    }
     const response = await startSessionRequest({
-      userId,
       movementIds: [movement.id],
     });
     setSessionId(response.sessionId);
@@ -78,6 +82,14 @@ export default function SessionPage() {
         <p className="text-slate-600">
           Dogruysa yesil, duzeltme gerekiyorsa kirmizi; guven dusukse sari gosterilir.
         </p>
+        {!isAuthenticated && (
+          <p className="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-800">
+            Bu sayfa icin giris gerekiyor.{" "}
+            <Link href="/auth" className="font-semibold underline">
+              Giris yap
+            </Link>
+          </p>
+        )}
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
@@ -110,7 +122,6 @@ export default function SessionPage() {
 
               void frameEvalRequest({
                 sessionId,
-                userId: getOrCreateUserId(),
                 movementId: movement.id,
                 quality: event.qualityInput,
                 expressionProxy: event.expressionProxy,
