@@ -47,7 +47,7 @@ function computeBlurScore(imageData: ImageData): number {
   if (samples === 0) {
     return 0;
   }
-  return clamp((gradientSum / samples) * 5);
+  return clamp((gradientSum / samples) * 9);
 }
 
 export function estimateHeadYaw(faceBox: FaceBox, frameWidth: number): number {

@@ -30,19 +30,19 @@ export function evaluateQuality(input: QualityInput): QualityScore {
     fpsScore * 0.1;
 
   const reasons: string[] = [];
-  if (brightnessScore < 0.55) {
+  if (brightnessScore < 0.45) {
     reasons.push("Isigi duzeltin.");
   }
-  if (blurScore < 0.55) {
+  if (blurScore < 0.35) {
     reasons.push("Kamerayi sabitleyin.");
   }
-  if (coverageScore < 0.55) {
+  if (coverageScore < 0.45) {
     reasons.push("Yuze biraz daha yaklasin.");
   }
-  if (yawScore < 0.55) {
+  if (yawScore < 0.45) {
     reasons.push("Yuzunuz kameraya daha duz dursun.");
   }
-  if (occlusionScore < 0.55) {
+  if (occlusionScore < 0.45) {
     reasons.push("Yuzunuzun onunu acin.");
   }
   if (fpsScore < 0.4) {
@@ -50,9 +50,9 @@ export function evaluateQuality(input: QualityInput): QualityScore {
   }
 
   let level: QualityScore["level"] = "good";
-  if (overall < 0.45) {
+  if (overall < 0.38) {
     level = "poor";
-  } else if (overall < 0.72) {
+  } else if (overall < 0.66) {
     level = "fair";
   }
 

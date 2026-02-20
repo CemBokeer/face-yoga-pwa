@@ -24,9 +24,49 @@ export function QualityCamera({ onFrame }: QualityCameraProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const onFrameRef = useRef<typeof onFrame>(onFrame);
+  const smoothedScoreRef = useRef<QualityScore | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [qualityScore, setQualityScore] = useState<QualityScore | null>(null);
+
+  useEffect(() => {
+    onFrameRef.current = onFrame;
+  }, [onFrame]);
+
+  function smoothQuality(next: QualityScore): QualityScore {
+    const prev = smoothedScoreRef.current;
+    if (!prev) {
+      smoothedScoreRef.current = next;
+      return next;
+    }
+
+    const lerp = (a: number, b: number, t: number) => a * (1 - t) + b * t;
+    const t = 0.35;
+    const overall = lerp(prev.overall, next.overall, t);
+    const blurScore = lerp(prev.blurScore, next.blurScore, t);
+    const brightnessScore = lerp(prev.brightnessScore, next.brightnessScore, t);
+    const coverageScore = lerp(prev.coverageScore, next.coverageScore, t);
+    const yawScore = lerp(prev.yawScore, next.yawScore, t);
+    const occlusionScore = lerp(prev.occlusionScore, next.occlusionScore, t);
+    const fpsScore = lerp(prev.fpsScore, next.fpsScore, t);
+    const level =
+      overall < 0.45 ? "poor" : overall < 0.72 ? "fair" : "good";
+
+    const smoothed: QualityScore = {
+      overall,
+      blurScore,
+      brightnessScore,
+      coverageScore,
+      yawScore,
+      occlusionScore,
+      fpsScore,
+      level,
+      reasons: next.reasons,
+    };
+    smoothedScoreRef.current = smoothed;
+    return smoothed;
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -86,10 +126,10 @@ export function QualityCamera({ onFrame }: QualityCameraProps) {
               faceBox: face,
               fps,
             });
-            const currentScore = evaluateQuality(qualityInput);
+            const currentScore = smoothQuality(evaluateQuality(qualityInput));
             setQualityScore(currentScore);
 
-            onFrame?.({
+            onFrameRef.current?.({
               qualityInput,
               qualityScore: currentScore,
               expressionProxy: expressionProxy(face),
@@ -117,7 +157,7 @@ export function QualityCamera({ onFrame }: QualityCameraProps) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [onFrame]);
+  }, []);
 
   const borderClass = useMemo(() => {
     if (!qualityScore) {
