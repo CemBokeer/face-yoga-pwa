@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
 import { QualityCamera } from "@/components/camera/quality-camera";
-import { getAccessToken } from "@/lib/auth/token";
+import { useAuthState } from "@/lib/auth/use-auth-state";
 import {
   calibrationFrameRequest,
   completeCalibrationRequest,
@@ -25,10 +25,10 @@ export default function OnboardingPage() {
     sampleCount,
     calibrationId,
   ]);
-  const isAuthenticated = !!getAccessToken();
+  const { isHydrated, isAuthenticated } = useAuthState();
 
   const startCalibration = async () => {
-    if (!isAuthenticated) {
+    if (!isHydrated || !isAuthenticated) {
       setStatus("Devam etmek icin once giris yapin.");
       return;
     }
@@ -76,7 +76,7 @@ export default function OnboardingPage() {
         <p className="text-slate-600">
           Kamera acikligina gore adaptif baseline olusturulur. Ham video saklanmaz.
         </p>
-        {!isAuthenticated && (
+        {isHydrated && !isAuthenticated && (
           <p className="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-800">
             Bu sayfa icin giris gerekiyor.{" "}
             <Link href="/auth" className="font-semibold underline">
