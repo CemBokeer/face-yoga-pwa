@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { getAccessToken } from "@/lib/auth/token";
+import { useAuthState } from "@/lib/auth/use-auth-state";
 import { historyMovementsRequest, historySessionsRequest } from "@/lib/client-api";
 import type { SessionRecord } from "@/lib/domain/types";
 
@@ -17,10 +17,10 @@ export default function HistoryPage() {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [movements, setMovements] = useState<MovementItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const isAuthenticated = !!getAccessToken();
+  const { isHydrated, isAuthenticated } = useAuthState();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isHydrated || !isAuthenticated) {
       return;
     }
     Promise.all([
@@ -32,7 +32,7 @@ export default function HistoryPage() {
         setMovements(movementPayload.movements ?? []);
       })
       .catch(() => setError("Gecmis verileri alinamadi."));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isHydrated]);
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-4xl space-y-6 px-4 py-8">
@@ -41,7 +41,7 @@ export default function HistoryPage() {
         <p className="mt-2 text-slate-600">
           Hangi gun ne kadar calistiginizi ve ortalama form kalitesini takip edin.
         </p>
-        {!isAuthenticated && (
+        {isHydrated && !isAuthenticated && (
           <p className="mt-3 rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-800">
             Gecmis verileri icin giris yapmalisiniz.{" "}
             <Link href="/auth" className="font-semibold underline">
