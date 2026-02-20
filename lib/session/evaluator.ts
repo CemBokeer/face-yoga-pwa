@@ -64,7 +64,9 @@ export function evaluateMovementFrame(
   }
 
   let statusColor: StatusColor = "green";
-  if (confidence < 0.28) {
+  if (input.previousPhase === "prepare" && !inTargetRange) {
+    statusColor = "yellow";
+  } else if (confidence < 0.28) {
     statusColor = "yellow";
     if (!errors.includes("Olcum guveni dusuk.")) {
       errors.push("Olcum guveni dusuk.");
@@ -85,7 +87,9 @@ export function evaluateMovementFrame(
       ? "Dogru form"
       : statusColor === "red"
         ? "Form duzeltme gerekli"
-        : "Kamera kosullarini iyilestir";
+        : input.previousPhase === "prepare"
+          ? "Hazirlik: referans pozisyona gelin"
+          : "Kamera kosullarini iyilestir";
 
   return {
     movementId: input.movement.id,

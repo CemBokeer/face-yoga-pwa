@@ -56,6 +56,10 @@ function nowISO(): string {
   return new Date().toISOString();
 }
 
+function clamp(value: number, min = 0, max = 1): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 export function startCalibration(input: {
   userId: string;
   deviceProfile: DeviceProfile;
@@ -218,14 +222,18 @@ export function endSession(sessionId: string, userId: string): SessionMetrics | 
   const completionRate =
     movementScores.length === 0
       ? 0
-      : movementScores.reduce((sum, item) => sum + item.averageAccuracy, 0) /
-        movementScores.length;
+      : clamp(
+          movementScores.reduce((sum, item) => sum + item.averageAccuracy, 0) /
+            movementScores.length,
+        );
 
-  const consistency =
+  const nonRedRatio =
     run.evaluations.length === 0
       ? 0
-      : run.evaluations.filter((item) => item.statusColor === "green").length /
+      : run.evaluations.filter((item) => item.statusColor !== "red").length /
         run.evaluations.length;
+  const consistency = clamp(nonRedRatio);
+  const blendedCompletion = clamp(completionRate * 0.7 + nonRedRatio * 0.3);
 
   const metrics: SessionMetrics = {
     sessionId: run.id,
@@ -233,7 +241,7 @@ export function endSession(sessionId: string, userId: string): SessionMetrics | 
     startedAt: new Date(run.startedAt).toISOString(),
     endedAt: new Date(endedAtMs).toISOString(),
     durationSec,
-    completionRate,
+    completionRate: blendedCompletion,
     consistency,
     movementScores,
   };
@@ -248,7 +256,7 @@ export function endSession(sessionId: string, userId: string): SessionMetrics | 
     averageAccuracy:
       movementScores.reduce((sum, item) => sum + item.averageAccuracy, 0) /
       Math.max(1, movementScores.length),
-    completionRate,
+    completionRate: blendedCompletion,
     movementScores,
   });
   store().sessionHistory.set(run.userId, history.slice(0, 200));
