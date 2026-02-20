@@ -1,0 +1,37 @@
+# Face Yoga PWA Architecture (MVP)
+
+## Runtime Components
+
+1. `Client Vision Engine`
+   - Captures camera frames.
+   - Computes frame quality signals (light, blur, face coverage, yaw, fps).
+   - Produces expression proxy for movement scoring.
+
+2. `Calibration Engine`
+   - Stores sampled frame metrics.
+   - Builds user baseline (neutral expression + variance).
+   - Recommends calibration duration (90-180 sec).
+
+3. `Session Evaluator`
+   - Uses movement definitions and baseline-normalized values.
+   - Emits `green` / `red` / `yellow`.
+   - Provides visual + audio cue text.
+
+4. `History Layer`
+   - Saves session summary and movement aggregates.
+   - Serves user timeline endpoints.
+
+## Data Contract
+
+Core contracts are defined in `lib/domain/types.ts`:
+
+- `CalibrationProfile`
+- `MovementDefinition`
+- `FrameEvaluation`
+- `SessionMetrics`
+
+## Privacy Model
+
+1. Raw camera video is processed in browser only.
+2. Persisted payloads are metric summaries, not face video frames.
+3. RLS-ready SQL schema is available in `supabase/migrations/0001_face_yoga_init.sql`.

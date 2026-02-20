@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Face Yoga PWA (MVP)
 
-## Getting Started
+Mobile-first face yoga coaching with:
 
-First, run the development server:
+1. Camera quality gate (light/blur/distance/yaw/fps checks)
+2. Adaptive calibration (90-180 sec)
+3. Real-time feedback (green/red/yellow + audio cue)
+4. Session history and progress summaries
+
+Raw camera video is processed in browser and not persisted.
+
+## Project Structure
+
+- `app/`: Next.js routes + API handlers
+- `components/`: UI components (camera and PWA helpers)
+- `lib/domain/`: core domain types and movement definitions
+- `lib/vision/`: quality scoring and normalization logic
+- `lib/session/`: state machine and frame evaluator
+- `lib/server/`: API parsing and server store abstraction
+- `supabase/migrations/`: SQL schema + RLS policies
+- `docs/`: architecture and operations docs
+
+## Local Development
 
 ```bash
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Quality Gates
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run typecheck
+npm run test
+```
 
-## Learn More
+CI (`.github/workflows/ci.yml`) runs the same gates on pull requests.
 
-To learn more about Next.js, take a look at the following resources:
+## GitHub Setup (first time)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Follow `docs/ops/github-setup.md`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Supabase Setup (first time)
 
-## Deploy on Vercel
+Follow `docs/ops/supabase-setup.md`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Current MVP Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Face detection currently uses browser `FaceDetector` when available.
+- Session evaluation uses normalized expression proxy + quality confidence.
+- Reference video in session page is a placeholder URL; replace with expert clips.
+- API persistence is currently in-memory store abstraction, with SQL schema prepared for Supabase migration.
+- If Supabase env vars are defined, calibration/session/history endpoints persist and read from DB.
