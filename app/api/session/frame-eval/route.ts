@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getMovementById } from "@/lib/domain/movements";
 import type { SessionPhase, StatusColor } from "@/lib/domain/types";
 import { evaluateMovementFrame } from "@/lib/session/evaluator";
+import { requireAuthenticatedUser } from "@/lib/server/auth";
 import { badRequest, isRecord, readJson } from "@/lib/server/http";
 import { asString, parseNumber, parseQualityInput } from "@/lib/server/parsers";
 import { appendSessionEvaluation, getCalibrationProfile } from "@/lib/server/store";
@@ -21,6 +22,11 @@ function parseStatus(value: unknown): StatusColor {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireAuthenticatedUser(request);
+  if (auth.response) {
+    return auth.response;
+  }
+
   const payload = await readJson(request);
   if (!isRecord(payload)) {
     return badRequest("Invalid request body.");
@@ -28,16 +34,15 @@ export async function POST(request: Request) {
 
   const sessionId = asString(payload.sessionId);
   const movementId = asString(payload.movementId);
-  const userId = asString(payload.userId);
   const qualityInput = parseQualityInput(payload.quality);
   const expressionProxy = parseNumber(payload.expressionProxy);
   const holdProgressSec = parseNumber(payload.holdProgressSec) ?? 0;
   const previousPhase = parsePhase(payload.previousPhase);
   const previousStatus = parseStatus(payload.previousStatus);
 
-  if (!sessionId || !movementId || !userId || !qualityInput || expressionProxy === null) {
+  if (!sessionId || !movementId || !qualityInput || expressionProxy === null) {
     return badRequest(
-      "sessionId, movementId, userId, quality and expressionProxy are required.",
+      "sessionId, movementId, quality and expressionProxy are required.",
     );
   }
 
@@ -46,7 +51,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Movement not found." }, { status: 404 });
   }
 
-  const profile = getCalibrationProfile(userId);
+  const profile = getCalibrationProfile(auth.user.id);
   const baseline = profile?.baselineGeometry.neutralExpressionProxy ?? 1;
   const measuredValue = expressionProxy / Math.max(0.001, baseline);
   const quality = evaluateQuality(qualityInput);
@@ -60,7 +65,7 @@ export async function POST(request: Request) {
     holdProgressSec,
   });
 
-  const ok = appendSessionEvaluation({ sessionId, evaluation });
+  const ok = appendSessionEvaluation({ sessionId, userId: auth.user.id, evaluation });
   if (!ok) {
     return NextResponse.json({ error: "Session not found." }, { status: 404 });
   }

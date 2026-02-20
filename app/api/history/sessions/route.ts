@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 
+import { requireAuthenticatedUser } from "@/lib/server/auth";
 import { getSessions } from "@/lib/server/store";
 import { fetchSessionHistory, isSupabaseConfigured } from "@/lib/server/supabase-rest";
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId");
-
-  if (!userId) {
-    return NextResponse.json({ error: "userId query is required." }, { status: 400 });
+  const auth = await requireAuthenticatedUser(request);
+  if (auth.response) {
+    return auth.response;
   }
 
+  const userId = auth.user.id;
   let sessions = getSessions(userId);
   if (isSupabaseConfigured()) {
     try {

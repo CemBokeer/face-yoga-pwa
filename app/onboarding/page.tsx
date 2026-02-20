@@ -1,14 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
 import { QualityCamera } from "@/components/camera/quality-camera";
+import { getAccessToken } from "@/lib/auth/token";
 import {
   calibrationFrameRequest,
   completeCalibrationRequest,
   startCalibrationRequest,
 } from "@/lib/client-api";
-import { getOrCreateUserId } from "@/lib/client-user";
 
 export default function OnboardingPage() {
   const [status, setStatus] = useState("Kalibrasyona hazir.");
@@ -24,12 +25,15 @@ export default function OnboardingPage() {
     sampleCount,
     calibrationId,
   ]);
+  const isAuthenticated = !!getAccessToken();
 
   const startCalibration = async () => {
+    if (!isAuthenticated) {
+      setStatus("Devam etmek icin once giris yapin.");
+      return;
+    }
     setProfileSummary(null);
-    const userId = getOrCreateUserId();
     const response = await startCalibrationRequest({
-      userId,
       deviceProfile: {
         platform: navigator.platform,
         userAgent: navigator.userAgent,
@@ -72,6 +76,14 @@ export default function OnboardingPage() {
         <p className="text-slate-600">
           Kamera acikligina gore adaptif baseline olusturulur. Ham video saklanmaz.
         </p>
+        {!isAuthenticated && (
+          <p className="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-800">
+            Bu sayfa icin giris gerekiyor.{" "}
+            <Link href="/auth" className="font-semibold underline">
+              Giris yap
+            </Link>
+          </p>
+        )}
       </header>
 
       <QualityCamera

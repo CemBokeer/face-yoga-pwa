@@ -82,10 +82,11 @@ export function startCalibration(input: {
 
 export function addCalibrationFrame(input: {
   calibrationId: string;
+  userId: string;
   frame: CalibrationFrame;
 }): { qualityLevel: "good" | "fair" | "poor"; averageScore: number } | null {
   const run = store().calibrationRuns.get(input.calibrationId);
-  if (!run) {
+  if (!run || run.userId !== input.userId) {
     return null;
   }
 
@@ -103,9 +104,12 @@ export function addCalibrationFrame(input: {
   };
 }
 
-export function completeCalibration(calibrationId: string): CalibrationProfile | null {
+export function completeCalibration(
+  calibrationId: string,
+  userId: string,
+): CalibrationProfile | null {
   const run = store().calibrationRuns.get(calibrationId);
-  if (!run) {
+  if (!run || run.userId !== userId) {
     return null;
   }
 
@@ -167,19 +171,20 @@ export function startSession(input: {
 
 export function appendSessionEvaluation(input: {
   sessionId: string;
+  userId: string;
   evaluation: FrameEvaluation;
 }): boolean {
   const run = store().sessionRuns.get(input.sessionId);
-  if (!run) {
+  if (!run || run.userId !== input.userId) {
     return false;
   }
   run.evaluations.push(input.evaluation);
   return true;
 }
 
-export function endSession(sessionId: string): SessionMetrics | null {
+export function endSession(sessionId: string, userId: string): SessionMetrics | null {
   const run = store().sessionRuns.get(sessionId);
-  if (!run) {
+  if (!run || run.userId !== userId) {
     return null;
   }
 

@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 
 import { badRequest, isRecord, readJson } from "@/lib/server/http";
 import { asString } from "@/lib/server/parsers";
+import { requireAuthenticatedUser } from "@/lib/server/auth";
 import { endSession } from "@/lib/server/store";
 import { isSupabaseConfigured, persistSessionMetrics } from "@/lib/server/supabase-rest";
 
 export async function POST(request: Request) {
+  const auth = await requireAuthenticatedUser(request);
+  if (auth.response) {
+    return auth.response;
+  }
+
   const payload = await readJson(request);
   if (!isRecord(payload)) {
     return badRequest("Invalid request body.");
@@ -16,7 +22,7 @@ export async function POST(request: Request) {
     return badRequest("sessionId is required.");
   }
 
-  const result = endSession(sessionId);
+  const result = endSession(sessionId, auth.user.id);
   if (!result) {
     return NextResponse.json({ error: "Session not found." }, { status: 404 });
   }
