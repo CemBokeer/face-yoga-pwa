@@ -8,6 +8,7 @@ import {
   loginRequest,
   meRequest,
   signupRequest,
+  updateConsentRequest,
 } from "@/lib/client-api";
 import { clearAccessToken, setAccessToken } from "@/lib/auth/token";
 
@@ -20,6 +21,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [telemetryOptIn, setTelemetryOptIn] = useState(false);
 
   const buttonLabel = useMemo(
     () => (mode === "login" ? "Giris Yap" : "Kayit Ol"),
@@ -44,6 +46,15 @@ export default function AuthPage() {
 
       setAccessToken(payload.accessToken);
       const me = await meRequest();
+      try {
+        await updateConsentRequest({
+          telemetryOptIn,
+          consentVersion: "v1",
+          locale: "tr-TR",
+        });
+      } catch {
+        // Consent sync failure should not block login flow.
+      }
       setMessage(`Giris basarili: ${me.user.email ?? me.user.id}`);
       router.push("/onboarding");
     } catch (error) {
@@ -126,6 +137,18 @@ export default function AuthPage() {
             Cikis
           </button>
         </div>
+
+        <label className="flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
+          <input
+            type="checkbox"
+            checked={telemetryOptIn}
+            onChange={(event) => setTelemetryOptIn(event.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            Anonim landmark telemetrisi paylasimina izin veriyorum. Ham video kaydedilmez.
+          </span>
+        </label>
       </section>
 
       {message && <p className="rounded-lg bg-slate-100 p-3 text-sm text-slate-700">{message}</p>}

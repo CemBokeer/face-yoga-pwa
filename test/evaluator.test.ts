@@ -52,3 +52,27 @@ test("evaluator returns yellow on low confidence", () => {
   assert.equal(frame.statusColor, "yellow");
   assert.ok(frame.errorReasons.length > 0);
 });
+
+test("evaluator avoids red in uncertain measurements", () => {
+  const quality = evaluateQuality({
+    brightness: 0.08,
+    blur: 0.05,
+    faceCoverage: 0.08,
+    headYawDeg: 20,
+    occlusion: 0.75,
+    fps: 8,
+  });
+
+  const frame = evaluateMovementFrame({
+    movement,
+    measuredValue: movement.targetMax + 0.35,
+    quality,
+    previousPhase: "hold",
+    previousStatus: "yellow",
+    holdProgressSec: 1,
+    usedLandmarks: false,
+    baselineConfidence: 0,
+  });
+
+  assert.notEqual(frame.statusColor, "red");
+});

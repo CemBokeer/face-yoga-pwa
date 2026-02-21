@@ -1,4 +1,9 @@
-import type { CalibrationProfile, SessionMetrics, SessionRecord } from "@/lib/domain/types";
+import type {
+  CalibrationProfile,
+  SessionMetrics,
+  SessionRecord,
+  TelemetryFrameSample,
+} from "@/lib/domain/types";
 
 interface SupabaseRestConfig {
   url: string;
@@ -191,4 +196,74 @@ export async function fetchMovementHistory(userId: string): Promise<
     sessions: value.count,
     averageAccuracy: value.score / Math.max(1, value.count),
   }));
+}
+
+export async function fetchUserConsent(userId: string): Promise<{
+  telemetryOptIn: boolean;
+  consentVersion: string;
+} | null> {
+  const encoded = encodeURIComponent(userId);
+  const rows =
+    (await request<
+      Array<{
+        telemetry_opt_in: boolean;
+        consent_version: string;
+      }>
+    >(
+      "GET",
+      `user_consents?select=telemetry_opt_in,consent_version&user_id=eq.${encoded}&limit=1`,
+    )) ?? [];
+  if (!rows.length) {
+    return null;
+  }
+  return {
+    telemetryOptIn: !!rows[0].telemetry_opt_in,
+    consentVersion: rows[0].consent_version ?? "v1",
+  };
+}
+
+export async function persistUserConsent(input: {
+  userId: string;
+  telemetryOptIn: boolean;
+  consentVersion: string;
+  locale: string;
+}): Promise<void> {
+  await request(
+    "POST",
+    "user_consents?on_conflict=user_id",
+    {
+      user_id: input.userId,
+      telemetry_opt_in: input.telemetryOptIn,
+      consent_version: input.consentVersion,
+      locale: input.locale,
+      updated_at: new Date().toISOString(),
+    },
+    "resolution=merge-duplicates,return=minimal",
+  );
+}
+
+export async function persistTelemetryFrame(input: {
+  userId: string;
+  sample: TelemetryFrameSample;
+}): Promise<void> {
+  await request(
+    "POST",
+    "frame_telemetry_samples",
+    {
+      user_id: input.userId,
+      pseudo_session_key: input.sample.pseudoSessionKey,
+      movement_id: input.sample.movementId,
+      model_version: input.sample.modelVersion,
+      device_orientation: input.sample.deviceOrientation,
+      quality_overall: input.sample.qualityOverall,
+      accuracy: input.sample.accuracy,
+      confidence: input.sample.confidence,
+      status_color: input.sample.statusColor,
+      distance_bucket: input.sample.distanceBucket,
+      latency_ms: input.sample.latencyMs,
+      notes: input.sample.notes ?? [],
+      created_at: new Date().toISOString(),
+    },
+    "return=minimal",
+  );
 }

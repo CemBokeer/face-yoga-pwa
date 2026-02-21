@@ -6,7 +6,7 @@
    - Captures camera frames.
    - Computes frame quality signals (light, blur, face coverage, yaw, fps).
    - Produces expression proxy for movement scoring.
-   - Landmark evaluation foundation is prepared in `lib/vision/landmark-evaluator.ts`.
+   - Produces canonical landmark points with fallback model versions.
 
 2. `Calibration Engine`
    - Stores sampled frame metrics.
@@ -15,12 +15,15 @@
 
 3. `Session Evaluator`
    - Uses movement definitions and baseline-normalized values.
+   - Mixes expression-proxy and landmark normalized scoring (when available).
    - Emits `green` / `red` / `yellow`.
    - Provides visual + audio cue text.
+   - Uses uncertainty fallback to avoid over-confident red outputs.
 
 4. `History Layer`
    - Saves session summary and movement aggregates.
    - Serves user timeline endpoints.
+   - Stores opt-in telemetry and fairness buckets by device orientation and distance.
 
 ## Data Contract
 
@@ -30,6 +33,9 @@ Core contracts are defined in `lib/domain/types.ts`:
 - `MovementDefinition`
 - `FrameEvaluation`
 - `SessionMetrics`
+- `PersonalBaselineV2`
+- `TelemetryFrameSample`
+- `FairnessBucketMetrics`
 
 ## Privacy Model
 

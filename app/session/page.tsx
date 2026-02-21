@@ -1,22 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { QualityCamera } from "@/components/camera/quality-camera";
 import { useAuthState } from "@/lib/auth/use-auth-state";
 import { MOVEMENTS } from "@/lib/domain/movements";
 import type { SessionPhase, StatusColor } from "@/lib/domain/types";
 import {
+  consentStateRequest,
   endSessionRequest,
   frameEvalRequest,
+  referenceMovementsRequest,
   startSessionRequest,
+  telemetryFrameRequest,
 } from "@/lib/client-api";
 import { speakFeedback } from "@/lib/session/audio";
 
 const movement = MOVEMENTS[0];
-const referenceVideo =
-  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 
 export default function SessionPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -26,10 +27,42 @@ export default function SessionPage() {
   const [confidence, setConfidence] = useState(0);
   const [phase, setPhase] = useState<SessionPhase>("prepare");
   const [summary, setSummary] = useState<string | null>(null);
+  const [telemetryOptIn, setTelemetryOptIn] = useState(false);
+  const [referenceVideo, setReferenceVideo] = useState(
+    "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+  );
+  const [referenceGuidance, setReferenceGuidance] = useState<string[]>([]);
+  const telemetryThrottleRef = useRef(0);
+  const pseudoSessionKeyRef = useRef(crypto.randomUUID());
   const frameThrottleRef = useRef(0);
   const holdProgressRef = useRef(0);
   const speechThrottleRef = useRef(0);
   const { isHydrated, isAuthenticated } = useAuthState();
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+    void referenceMovementsRequest()
+      .then((payload) => {
+        const profile = payload.movements.find((item) => item.movementId === movement.id);
+        if (!profile) {
+          return;
+        }
+        setReferenceVideo(profile.videoUrl);
+        setReferenceGuidance(profile.guidance);
+      })
+      .catch(() => undefined);
+  }, [isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated || !isAuthenticated) {
+      return;
+    }
+    void consentStateRequest()
+      .then((payload) => setTelemetryOptIn(payload.telemetryOptIn))
+      .catch(() => undefined);
+  }, [isAuthenticated, isHydrated]);
 
   const statusColorClass = useMemo(() => {
     if (statusColor === "green") {
@@ -125,6 +158,12 @@ export default function SessionPage() {
                 movementId: movement.id,
                 quality: event.qualityInput,
                 expressionProxy: event.expressionProxy,
+                landmarks: event.landmarks,
+                landmarkModelVersion: event.landmarkModelVersion,
+                frameTimestampMs: Date.now(),
+                deviceOrientation:
+                  window.innerHeight >= window.innerWidth ? "portrait" : "landscape",
+                calibrationVersion: "v2",
                 holdProgressSec: holdProgressRef.current,
                 previousPhase: phase,
                 previousStatus: statusColor,
@@ -138,6 +177,24 @@ export default function SessionPage() {
                   if (Date.now() - speechThrottleRef.current > 2500) {
                     speakFeedback(evaluation.audioCue);
                     speechThrottleRef.current = Date.now();
+                  }
+
+                  if (telemetryOptIn && Date.now() - telemetryThrottleRef.current > 1400) {
+                    telemetryThrottleRef.current = Date.now();
+                    void telemetryFrameRequest({
+                      pseudoSessionKey: pseudoSessionKeyRef.current,
+                      movementId: movement.id,
+                      modelVersion: evaluation.debug?.modelVersion ?? event.landmarkModelVersion,
+                      deviceOrientation:
+                        window.innerHeight >= window.innerWidth ? "portrait" : "landscape",
+                      qualityOverall: event.qualityScore.overall,
+                      accuracy: evaluation.accuracy,
+                      confidence: evaluation.confidence,
+                      statusColor: evaluation.statusColor,
+                      distanceBucket: event.distanceBucket,
+                      latencyMs: 0,
+                      notes: evaluation.errorReasons,
+                    }).catch(() => undefined);
                   }
                 })
                 .catch((error: unknown) => {
@@ -159,10 +216,17 @@ export default function SessionPage() {
             playsInline
             className="h-[240px] w-full rounded-xl bg-black object-cover"
           />
-          <p className="mt-2 text-xs text-slate-500">
-            Bu kaynak placeholder videodur. Uretimde uzman cekimi hareket klipleri
-            kullanilmalidir.
-          </p>
+          {referenceGuidance.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-xs text-slate-600">
+              {referenceGuidance.map((item) => (
+                <li key={item}>- {item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-xs text-slate-500">
+              Referans kaynak yuklenemedi, varsayilan video gosteriliyor.
+            </p>
+          )}
         </aside>
       </div>
 

@@ -1,4 +1,4 @@
-import type { DeviceProfile, QualityInput } from "@/lib/domain/types";
+import type { DeviceProfile, Point3D, QualityInput } from "@/lib/domain/types";
 
 export function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
@@ -44,9 +44,51 @@ export function parseQualityInput(value: unknown): QualityInput | null {
   ) {
     return null;
   }
-  return { brightness, blur, faceCoverage, headYawDeg, occlusion, fps };
+  const faceSignal =
+    record.faceSignal === "detected" ||
+    record.faceSignal === "not_detected" ||
+    record.faceSignal === "unsupported"
+      ? record.faceSignal
+      : undefined;
+  return { brightness, blur, faceCoverage, headYawDeg, occlusion, fps, faceSignal };
 }
 
 export function parseNumber(value: unknown): number | null {
   return asNumber(value);
+}
+
+function parsePoint3D(value: unknown): Point3D | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const x = asNumber(record.x);
+  const y = asNumber(record.y);
+  const z = asNumber(record.z);
+  if (x === null || y === null || z === null) {
+    return null;
+  }
+  return { x, y, z };
+}
+
+export function parseLandmarks(value: unknown): Point3D[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+  const points: Point3D[] = [];
+  for (const item of value) {
+    const point = parsePoint3D(item);
+    if (!point) {
+      return null;
+    }
+    points.push(point);
+  }
+  return points;
+}
+
+export function parseDistanceBucket(value: unknown): "near" | "mid" | "far" | null {
+  if (value === "near" || value === "mid" || value === "far") {
+    return value;
+  }
+  return null;
 }

@@ -13,6 +13,49 @@ export interface Point3D {
   z: number;
 }
 
+export interface LandmarkFrame {
+  points: Point3D[];
+  modelVersion: string;
+  timestampMs: number;
+}
+
+export interface MovementFeatureVector {
+  smileRatio: number;
+  mouthOpenRatio: number;
+  jawDropRatio: number;
+  cheekLiftRatio: number;
+  symmetryScore: number;
+}
+
+export interface PersonalBaselineV2 {
+  calibrationVersion: string;
+  neutralExpressionProxy: number;
+  neutralFeatures: MovementFeatureVector;
+  rangeOfMotion: {
+    smileRatio: number;
+    mouthOpenRatio: number;
+    jawDropRatio: number;
+    cheekLiftRatio: number;
+  };
+  confidence: number;
+}
+
+export interface EvaluationDebug {
+  modelVersion: string;
+  usedLandmarks: boolean;
+  measuredValue: number;
+  hysteresisApplied: boolean;
+  notes: string[];
+}
+
+export interface FairnessBucketMetrics {
+  bucketId: string;
+  sampleCount: number;
+  averageAccuracy: number;
+  averageConfidence: number;
+  redRate: number;
+}
+
 export interface QualityInput {
   brightness: number;
   blur: number;
@@ -39,11 +82,24 @@ export interface CalibrationFrame {
   timestamp: number;
   quality: QualityInput;
   expressionProxy: number;
+  landmarks?: Point3D[];
+  landmarkModelVersion?: string;
+  qualityBreakdown?: {
+    brightnessScore: number;
+    blurScore: number;
+    coverageScore: number;
+    yawScore: number;
+    occlusionScore: number;
+    fpsScore: number;
+    overall: number;
+  };
+  distanceBucket?: "near" | "mid" | "far";
 }
 
 export interface CalibrationProfile {
   userId: string;
   createdAt: string;
+  calibrationVersion?: string;
   qualityStats: {
     averageScore: number;
     sampleCount: number;
@@ -57,6 +113,7 @@ export interface CalibrationProfile {
     index: number;
   };
   deviceProfile: DeviceProfile;
+  personalBaselineV2?: PersonalBaselineV2;
 }
 
 export interface MovementDefinition {
@@ -79,6 +136,7 @@ export interface FrameEvaluation {
   audioCue: string;
   visualCue: string;
   phase: SessionPhase;
+  debug?: EvaluationDebug;
 }
 
 export type SessionPhase = "prepare" | "activate" | "hold" | "release";
@@ -111,4 +169,18 @@ export interface SessionRecord {
     averageAccuracy: number;
     repCount: number;
   }>;
+}
+
+export interface TelemetryFrameSample {
+  pseudoSessionKey: string;
+  movementId: string;
+  modelVersion: string;
+  deviceOrientation: "portrait" | "landscape";
+  qualityOverall: number;
+  accuracy: number;
+  confidence: number;
+  statusColor: StatusColor;
+  distanceBucket: "near" | "mid" | "far";
+  latencyMs: number;
+  notes?: string[];
 }

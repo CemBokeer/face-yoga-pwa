@@ -16,7 +16,7 @@ function targetBandScore(value: number, min: number, max: number): number {
 export function evaluateQuality(input: QualityInput): QualityScore {
   const brightnessScore = targetBandScore(input.brightness, 0.35, 0.75);
   const blurScore = clamp(input.blur);
-  const coverageScore = targetBandScore(input.faceCoverage, 0.16, 0.4);
+  const coverageScore = targetBandScore(input.faceCoverage, 0.1, 0.38);
   const yawScore = clamp(1 - Math.abs(input.headYawDeg) / 35);
   const occlusionScore = clamp(1 - input.occlusion);
   const fpsScore = clamp((input.fps - 8) / 16);
@@ -38,9 +38,9 @@ export function evaluateQuality(input: QualityInput): QualityScore {
   }
   if (
     blurScore < 0.16 &&
-    brightnessScore > 0.58 &&
-    coverageScore > 0.4 &&
-    fpsScore > 0.5
+    brightnessScore > 0.68 &&
+    coverageScore > 0.65 &&
+    fpsScore > 0.6
   ) {
     reasons.push("Kamerayi sabitleyin.");
   } else if (blurScore < 0.16 && brightnessScore <= 0.58) {
@@ -48,7 +48,7 @@ export function evaluateQuality(input: QualityInput): QualityScore {
   }
   if (faceMissing) {
     reasons.push("Yuzunuzu kadraj icine alin.");
-  } else if (hasFaceGeometry && coverageScore < 0.45) {
+  } else if (hasFaceGeometry && coverageScore < 0.2) {
     reasons.push("Yuze biraz daha yaklasin.");
   }
   if (hasFaceGeometry && yawScore < 0.45) {
