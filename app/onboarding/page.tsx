@@ -101,6 +101,18 @@ export default function OnboardingPage() {
             calibrationId,
             quality: event.qualityInput,
             expressionProxy: event.expressionProxy,
+            landmarks: event.landmarks,
+            landmarkModelVersion: event.landmarkModelVersion,
+            distanceBucket: event.distanceBucket,
+            qualityBreakdown: {
+              brightnessScore: event.qualityScore.brightnessScore,
+              blurScore: event.qualityScore.blurScore,
+              coverageScore: event.qualityScore.coverageScore,
+              yawScore: event.qualityScore.yawScore,
+              occlusionScore: event.qualityScore.occlusionScore,
+              fpsScore: event.qualityScore.fpsScore,
+              overall: event.qualityScore.overall,
+            },
           })
             .then((result) => {
               setSampleCount((count) => count + 1);

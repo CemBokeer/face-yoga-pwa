@@ -2,11 +2,19 @@ import type {
   CalibrationFrame,
   CalibrationProfile,
   DeviceProfile,
+  FairnessBucketMetrics,
   FrameEvaluation,
   SessionMetrics,
   SessionRecord,
+  TelemetryFrameSample,
 } from "@/lib/domain/types";
-import { computeSymmetryIndex, summarizeExpression } from "@/lib/vision/normalization";
+import {
+  averageFeatureVector,
+  computeSymmetryIndex,
+  extractMovementFeatureVector,
+  featureRange,
+  summarizeExpression,
+} from "@/lib/vision/normalization";
 import { evaluateQuality, recommendedCalibrationSeconds } from "@/lib/vision/quality";
 
 interface CalibrationRun {
@@ -25,11 +33,26 @@ interface SessionRun {
   evaluations: FrameEvaluation[];
 }
 
+interface UserConsentRecord {
+  userId: string;
+  telemetryOptIn: boolean;
+  consentVersion: string;
+  locale: string;
+  updatedAt: string;
+}
+
+interface StoredTelemetryFrame extends TelemetryFrameSample {
+  userId: string;
+  createdAt: string;
+}
+
 interface MemoryStore {
   calibrationRuns: Map<string, CalibrationRun>;
   calibrationProfiles: Map<string, CalibrationProfile>;
   sessionRuns: Map<string, SessionRun>;
   sessionHistory: Map<string, SessionRecord[]>;
+  userConsents: Map<string, UserConsentRecord>;
+  telemetryFrames: StoredTelemetryFrame[];
 }
 
 declare global {
@@ -42,6 +65,8 @@ function createStore(): MemoryStore {
     calibrationProfiles: new Map(),
     sessionRuns: new Map(),
     sessionHistory: new Map(),
+    userConsents: new Map(),
+    telemetryFrames: [],
   };
 }
 
@@ -140,9 +165,18 @@ export function completeCalibration(
   const left = expressionSeries.map((value) => value * 0.99);
   const right = expressionSeries.map((value) => value * 1.01);
 
+  const featureFrames = run.frames
+    .filter((frame) => Array.isArray(frame.landmarks) && frame.landmarks.length > 0)
+    .map((frame) => extractMovementFeatureVector(frame.landmarks!));
+  const neutralFeatures = averageFeatureVector(featureFrames);
+  const ranges = featureRange(featureFrames);
+  const featureCoverage = clamp(featureFrames.length / Math.max(20, run.frames.length));
+  const confidence = clamp(averageScore * 0.65 + featureCoverage * 0.35);
+
   const profile: CalibrationProfile = {
     userId: run.userId,
     createdAt: nowISO(),
+    calibrationVersion: "v2",
     qualityStats: {
       averageScore,
       sampleCount: run.frames.length,
@@ -156,6 +190,13 @@ export function completeCalibration(
       index: computeSymmetryIndex(left, right),
     },
     deviceProfile: run.deviceProfile,
+    personalBaselineV2: {
+      calibrationVersion: "v2",
+      neutralExpressionProxy: expressionSummary.neutral,
+      neutralFeatures,
+      rangeOfMotion: ranges,
+      confidence,
+    },
   };
 
   store().calibrationProfiles.set(run.userId, profile);
@@ -310,5 +351,85 @@ export function getMovementHistory(userId: string): Array<{
     movementId,
     sessions: value.count,
     averageAccuracy: value.score / Math.max(1, value.count),
+  }));
+}
+
+export function getUserConsent(userId: string): UserConsentRecord {
+  return (
+    store().userConsents.get(userId) ?? {
+      userId,
+      telemetryOptIn: false,
+      consentVersion: "v1",
+      locale: "tr-TR",
+      updatedAt: nowISO(),
+    }
+  );
+}
+
+export function updateUserConsent(input: {
+  userId: string;
+  telemetryOptIn: boolean;
+  consentVersion: string;
+  locale?: string;
+}): UserConsentRecord {
+  const next: UserConsentRecord = {
+    userId: input.userId,
+    telemetryOptIn: input.telemetryOptIn,
+    consentVersion: input.consentVersion,
+    locale: input.locale ?? "tr-TR",
+    updatedAt: nowISO(),
+  };
+  store().userConsents.set(input.userId, next);
+  return next;
+}
+
+export function appendTelemetryFrame(input: {
+  userId: string;
+  sample: TelemetryFrameSample;
+}): boolean {
+  const consent = getUserConsent(input.userId);
+  if (!consent.telemetryOptIn) {
+    return false;
+  }
+
+  store().telemetryFrames.unshift({
+    ...input.sample,
+    userId: input.userId,
+    createdAt: nowISO(),
+  });
+  store().telemetryFrames = store().telemetryFrames.slice(0, 5000);
+  return true;
+}
+
+export function getFairnessBuckets(userId: string): FairnessBucketMetrics[] {
+  const rows = store().telemetryFrames.filter((item) => item.userId === userId);
+  const buckets = new Map<
+    string,
+    { count: number; accuracy: number; confidence: number; redCount: number }
+  >();
+
+  for (const row of rows) {
+    const key = `${row.deviceOrientation}:${row.distanceBucket}`;
+    const current = buckets.get(key) ?? {
+      count: 0,
+      accuracy: 0,
+      confidence: 0,
+      redCount: 0,
+    };
+    current.count += 1;
+    current.accuracy += row.accuracy;
+    current.confidence += row.confidence;
+    if (row.statusColor === "red") {
+      current.redCount += 1;
+    }
+    buckets.set(key, current);
+  }
+
+  return [...buckets.entries()].map(([bucketId, value]) => ({
+    bucketId,
+    sampleCount: value.count,
+    averageAccuracy: value.accuracy / Math.max(1, value.count),
+    averageConfidence: value.confidence / Math.max(1, value.count),
+    redRate: value.redCount / Math.max(1, value.count),
   }));
 }

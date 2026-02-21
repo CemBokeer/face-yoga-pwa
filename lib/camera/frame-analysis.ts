@@ -1,4 +1,5 @@
 import type { QualityInput } from "@/lib/domain/types";
+import { extractMovementFeatureVector } from "@/lib/vision/normalization";
 
 export interface FaceBox {
   x: number;
@@ -110,10 +111,25 @@ export function buildQualityInput(params: {
   };
 }
 
-export function expressionProxy(faceBox: FaceBox | null): number {
+export function expressionProxy(faceBox: FaceBox | null, landmarks?: Array<{ x: number; y: number; z: number }>): number {
+  if (landmarks && landmarks.length >= 11) {
+    const features = extractMovementFeatureVector(landmarks);
+    return clamp(features.smileRatio * 0.7 + features.cheekLiftRatio * 0.3, 0.6, 1.5);
+  }
+
   if (!faceBox) {
     return 1;
   }
   const ratio = faceBox.width / Math.max(1, faceBox.height);
   return clamp(ratio, 0.7, 1.4);
+}
+
+export function distanceBucket(faceCoverage: number): "near" | "mid" | "far" {
+  if (faceCoverage >= 0.28) {
+    return "near";
+  }
+  if (faceCoverage >= 0.12) {
+    return "mid";
+  }
+  return "far";
 }

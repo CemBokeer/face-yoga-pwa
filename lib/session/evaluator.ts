@@ -14,6 +14,9 @@ export interface EvaluateFrameInput {
   previousPhase: SessionPhase;
   previousStatus: StatusColor;
   holdProgressSec: number;
+  usedLandmarks?: boolean;
+  landmarkModelVersion?: string;
+  baselineConfidence?: number;
 }
 
 function clamp(value: number, min = 0, max = 1): number {
@@ -36,6 +39,9 @@ function valueAccuracy(
 export function evaluateMovementFrame(
   input: EvaluateFrameInput,
 ): FrameEvaluation {
+  const usedLandmarks = !!input.usedLandmarks;
+  const landmarkBoost = usedLandmarks ? 0.08 : -0.06;
+  const baselineBoost = (input.baselineConfidence ?? 0) * 0.08;
   const tolerance =
     input.previousStatus === "green" || input.previousStatus === "yellow"
       ? 0.03
@@ -51,8 +57,8 @@ export function evaluateMovementFrame(
   );
   const confidence = clamp(
     Math.max(
-      input.quality.overall * 0.85 + input.quality.blurScore * 0.15,
-      input.quality.overall * 0.75,
+      input.quality.overall * 0.85 + input.quality.blurScore * 0.15 + landmarkBoost + baselineBoost,
+      input.quality.overall * 0.72 + landmarkBoost,
     ),
   );
 
@@ -68,18 +74,26 @@ export function evaluateMovementFrame(
   }
 
   let statusColor: StatusColor = "green";
+  const hysteresisApplied = input.previousStatus === "green" && accuracy > 0.52;
   if (input.previousPhase === "prepare" && !inTargetRange) {
     statusColor = "yellow";
-  } else if (confidence < 0.28) {
+  } else if (confidence < 0.35) {
     statusColor = "yellow";
     if (!errors.includes("Olcum guveni dusuk.")) {
       errors.push("Olcum guveni dusuk.");
     }
   } else if (!inTargetRange) {
-    statusColor = accuracy < 0.4 ? "red" : "yellow";
+    statusColor = accuracy < 0.34 ? "red" : "yellow";
   } else if (accuracy < 0.45) {
     statusColor = "red";
   } else if (accuracy < 0.65) {
+    statusColor = "yellow";
+  }
+
+  if (hysteresisApplied && statusColor === "yellow" && confidence >= 0.5) {
+    statusColor = "green";
+  }
+  if (confidence < 0.42 && statusColor === "red") {
     statusColor = "yellow";
   }
 
@@ -117,5 +131,12 @@ export function evaluateMovementFrame(
     audioCue,
     visualCue,
     phase,
+    debug: {
+      modelVersion: input.landmarkModelVersion ?? "v1-unknown",
+      usedLandmarks,
+      measuredValue: input.measuredValue,
+      hysteresisApplied,
+      notes: errors.slice(0, 2),
+    },
   };
 }

@@ -4,11 +4,13 @@ import { getAccessToken } from "@/lib/auth/token";
 import type {
   CalibrationProfile,
   FrameEvaluation,
+  Point3D,
   QualityInput,
   SessionRecord,
   SessionMetrics,
   SessionPhase,
   StatusColor,
+  TelemetryFrameSample,
 } from "@/lib/domain/types";
 
 interface RequestErrorPayload {
@@ -119,6 +121,18 @@ export async function calibrationFrameRequest(input: {
   calibrationId: string;
   quality: QualityInput;
   expressionProxy: number;
+  landmarks?: Point3D[];
+  landmarkModelVersion?: string;
+  qualityBreakdown?: {
+    brightnessScore: number;
+    blurScore: number;
+    coverageScore: number;
+    yawScore: number;
+    occlusionScore: number;
+    fpsScore: number;
+    overall: number;
+  };
+  distanceBucket?: "near" | "mid" | "far";
 }): Promise<{ qualityLevel: string; averageScore: number }> {
   return postJSON("/api/calibration/frame", input);
 }
@@ -140,6 +154,11 @@ export async function frameEvalRequest(input: {
   movementId: string;
   quality: QualityInput;
   expressionProxy: number;
+  landmarks?: Point3D[];
+  landmarkModelVersion?: string;
+  frameTimestampMs?: number;
+  deviceOrientation?: "portrait" | "landscape";
+  calibrationVersion?: string;
   holdProgressSec: number;
   previousPhase: SessionPhase;
   previousStatus: StatusColor;
@@ -165,4 +184,36 @@ export async function historyMovementsRequest(): Promise<{
   }>;
 }> {
   return getJSON("/api/history/movements");
+}
+
+export async function referenceMovementsRequest(): Promise<{
+  movements: Array<{
+    movementId: string;
+    title: string;
+    videoUrl: string;
+    guidance: string[];
+    targetFeature: "smileRatio" | "mouthOpenRatio" | "jawDropRatio" | "cheekLiftRatio";
+    modelVersion: string;
+  }>;
+}> {
+  return getJSON("/api/reference/movements");
+}
+
+export async function consentStateRequest(): Promise<{
+  telemetryOptIn: boolean;
+  consentVersion: string;
+}> {
+  return getJSON("/api/consent");
+}
+
+export async function updateConsentRequest(input: {
+  telemetryOptIn: boolean;
+  consentVersion: string;
+  locale?: string;
+}): Promise<{ telemetryOptIn: boolean; consentVersion: string }> {
+  return postJSON("/api/consent", input);
+}
+
+export async function telemetryFrameRequest(input: TelemetryFrameSample): Promise<{ ok: true }> {
+  return postJSON("/api/telemetry/frame", input as unknown as Record<string, unknown>);
 }

@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { buildQualityInput, expressionProxy } from "@/lib/camera/frame-analysis";
-import type { QualityInput, QualityScore } from "@/lib/domain/types";
-import { detectFace, isFaceDetectionSupported } from "@/lib/vision/browser-face";
+import { buildQualityInput, distanceBucket, expressionProxy } from "@/lib/camera/frame-analysis";
+import type { Point3D, QualityInput, QualityScore } from "@/lib/domain/types";
+import { detectFaceSignal, isFaceDetectionSupported } from "@/lib/vision/browser-face";
 import { evaluateQuality } from "@/lib/vision/quality";
 
 interface CameraFrameEvent {
@@ -12,6 +12,9 @@ interface CameraFrameEvent {
   qualityScore: QualityScore;
   expressionProxy: number;
   hasFace: boolean;
+  landmarks: Point3D[];
+  landmarkModelVersion: string;
+  distanceBucket: "near" | "mid" | "far";
   videoWidth: number;
   videoHeight: number;
 }
@@ -118,24 +121,28 @@ export function QualityCamera({ onFrame }: QualityCameraProps) {
             canvas.height = videoEl.videoHeight;
             ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const face = await detectFace(videoEl);
+            const face = await detectFaceSignal(videoEl);
             const now = performance.now();
             const fps = Math.min(30, 1000 / Math.max(8, now - lastTick));
             lastTick = now;
             const qualityInput = buildQualityInput({
               imageData,
-              faceBox: face,
+              faceBox: face.box,
               faceDetectionSupported,
               fps,
             });
             const currentScore = smoothQuality(evaluateQuality(qualityInput));
             setQualityScore(currentScore);
+            const proximity = distanceBucket(qualityInput.faceCoverage);
 
             onFrameRef.current?.({
               qualityInput,
               qualityScore: currentScore,
-              expressionProxy: expressionProxy(face),
-              hasFace: !!face,
+              expressionProxy: expressionProxy(face.box, face.landmarks),
+              hasFace: !!face.box,
+              landmarks: face.landmarks,
+              landmarkModelVersion: face.modelVersion,
+              distanceBucket: proximity,
               videoWidth: videoEl.videoWidth,
               videoHeight: videoEl.videoHeight,
             });
