@@ -33,8 +33,15 @@ export function evaluateQuality(input: QualityInput): QualityScore {
   if (brightnessScore < 0.45) {
     reasons.push("Isigi duzeltin.");
   }
-  if (blurScore < 0.22 && brightnessScore > 0.35) {
+  if (
+    blurScore < 0.16 &&
+    brightnessScore > 0.58 &&
+    coverageScore > 0.4 &&
+    fpsScore > 0.5
+  ) {
     reasons.push("Kamerayi sabitleyin.");
+  } else if (blurScore < 0.16 && brightnessScore <= 0.58) {
+    reasons.push("Isigi biraz artirin.");
   }
   if (coverageScore < 0.45) {
     reasons.push("Yuze biraz daha yaklasin.");

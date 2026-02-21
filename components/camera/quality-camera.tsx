@@ -51,7 +51,7 @@ export function QualityCamera({ onFrame }: QualityCameraProps) {
     const occlusionScore = lerp(prev.occlusionScore, next.occlusionScore, t);
     const fpsScore = lerp(prev.fpsScore, next.fpsScore, t);
     const level =
-      overall < 0.45 ? "poor" : overall < 0.72 ? "fair" : "good";
+      overall < 0.38 ? "poor" : overall < 0.66 ? "fair" : "good";
 
     const smoothed: QualityScore = {
       overall,
