@@ -36,9 +36,13 @@ function valueAccuracy(
 export function evaluateMovementFrame(
   input: EvaluateFrameInput,
 ): FrameEvaluation {
+  const tolerance =
+    input.previousStatus === "green" || input.previousStatus === "yellow"
+      ? 0.03
+      : 0.015;
   const inTargetRange =
-    input.measuredValue >= input.movement.targetMin &&
-    input.measuredValue <= input.movement.targetMax;
+    input.measuredValue >= input.movement.targetMin - tolerance &&
+    input.measuredValue <= input.movement.targetMax + tolerance;
   const accuracy = valueAccuracy(
     input.measuredValue,
     input.movement.targetMin,
@@ -71,8 +75,12 @@ export function evaluateMovementFrame(
     if (!errors.includes("Olcum guveni dusuk.")) {
       errors.push("Olcum guveni dusuk.");
     }
-  } else if (accuracy < 0.68 || !inTargetRange) {
+  } else if (!inTargetRange) {
+    statusColor = accuracy < 0.4 ? "red" : "yellow";
+  } else if (accuracy < 0.45) {
     statusColor = "red";
+  } else if (accuracy < 0.65) {
+    statusColor = "yellow";
   }
 
   const audioCue =
@@ -89,7 +97,9 @@ export function evaluateMovementFrame(
         ? "Form duzeltme gerekli"
         : input.previousPhase === "prepare"
           ? "Hazirlik: referans pozisyona gelin"
-          : "Kamera kosullarini iyilestir";
+          : errors.some((item) => item.includes("Hareket acisini"))
+            ? "Formu biraz daha hizalayin"
+            : "Kamera kosullarini iyilestir";
 
   return {
     movementId: input.movement.id,

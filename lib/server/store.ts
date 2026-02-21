@@ -60,6 +60,17 @@ function clamp(value: number, min = 0, max = 1): number {
   return Math.max(min, Math.min(max, value));
 }
 
+function statusWeight(status: FrameEvaluation["statusColor"]): number {
+  switch (status) {
+    case "green":
+      return 1;
+    case "yellow":
+      return 0.65;
+    default:
+      return 0.2;
+  }
+}
+
 export function startCalibration(input: {
   userId: string;
   deviceProfile: DeviceProfile;
@@ -227,13 +238,13 @@ export function endSession(sessionId: string, userId: string): SessionMetrics | 
             movementScores.length,
         );
 
-  const nonRedRatio =
+  const weightedConsistency =
     run.evaluations.length === 0
       ? 0
-      : run.evaluations.filter((item) => item.statusColor !== "red").length /
+      : run.evaluations.reduce((sum, item) => sum + statusWeight(item.statusColor), 0) /
         run.evaluations.length;
-  const consistency = clamp(nonRedRatio);
-  const blendedCompletion = clamp(completionRate * 0.7 + nonRedRatio * 0.3);
+  const consistency = clamp(weightedConsistency);
+  const blendedCompletion = clamp(completionRate * 0.6 + consistency * 0.4);
 
   const metrics: SessionMetrics = {
     sessionId: run.id,
