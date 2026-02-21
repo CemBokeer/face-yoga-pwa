@@ -83,12 +83,19 @@ export function evaluateMovementFrame(
     statusColor = "yellow";
   }
 
+  const hasFormError = errors.some((item) => item.includes("Hareket acisini"));
+  const hasLowConfidenceError = errors.includes("Olcum guveni dusuk.");
+
   const audioCue =
     statusColor === "green"
       ? "Harika, formu koru."
       : statusColor === "red"
         ? "Hafifce duzelt, referans videoyu takip et."
-        : "Olcum dusuk guvenli, kamerayi sabitle.";
+        : hasFormError
+          ? "Iyi gidiyor, hareket acisini biraz daha ayarla."
+          : hasLowConfidenceError
+            ? "Hareketi yavas ve kontrollu surdur."
+            : "Ritmi koru, formu nazikce hizala.";
 
   const visualCue =
     statusColor === "green"
@@ -97,9 +104,9 @@ export function evaluateMovementFrame(
         ? "Form duzeltme gerekli"
         : input.previousPhase === "prepare"
           ? "Hazirlik: referans pozisyona gelin"
-          : errors.some((item) => item.includes("Hareket acisini"))
+          : hasFormError
             ? "Formu biraz daha hizalayin"
-            : "Kamera kosullarini iyilestir";
+            : "Hareketi kontrollu surdur";
 
   return {
     movementId: input.movement.id,

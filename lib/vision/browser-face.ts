@@ -41,6 +41,13 @@ function getDetector(): FaceDetectorLike | null {
 
 let detectorCache: FaceDetectorLike | null | undefined;
 
+export function isFaceDetectionSupported(): boolean {
+  if (detectorCache === undefined) {
+    detectorCache = getDetector();
+  }
+  return !!detectorCache;
+}
+
 export async function detectFace(video: HTMLVideoElement): Promise<FaceBox | null> {
   if (detectorCache === undefined) {
     detectorCache = getDetector();

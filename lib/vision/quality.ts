@@ -30,6 +30,9 @@ export function evaluateQuality(input: QualityInput): QualityScore {
     fpsScore * 0.1;
 
   const reasons: string[] = [];
+  const hasFaceGeometry = input.faceSignal !== "unsupported";
+  const faceMissing = input.faceSignal === "not_detected";
+
   if (brightnessScore < 0.45) {
     reasons.push("Isigi duzeltin.");
   }
@@ -43,13 +46,15 @@ export function evaluateQuality(input: QualityInput): QualityScore {
   } else if (blurScore < 0.16 && brightnessScore <= 0.58) {
     reasons.push("Isigi biraz artirin.");
   }
-  if (coverageScore < 0.45) {
+  if (faceMissing) {
+    reasons.push("Yuzunuzu kadraj icine alin.");
+  } else if (hasFaceGeometry && coverageScore < 0.45) {
     reasons.push("Yuze biraz daha yaklasin.");
   }
-  if (yawScore < 0.45) {
+  if (hasFaceGeometry && yawScore < 0.45) {
     reasons.push("Yuzunuz kameraya daha duz dursun.");
   }
-  if (occlusionScore < 0.45) {
+  if (hasFaceGeometry && occlusionScore < 0.45) {
     reasons.push("Yuzunuzun onunu acin.");
   }
   if (fpsScore < 0.4) {
