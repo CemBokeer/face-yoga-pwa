@@ -60,13 +60,28 @@ export function estimateHeadYaw(faceBox: FaceBox, frameWidth: number): number {
 export function buildQualityInput(params: {
   imageData: ImageData;
   faceBox: FaceBox | null;
+  faceDetectionSupported?: boolean;
   fps: number;
 }): QualityInput {
-  const { imageData, faceBox, fps } = params;
+  const { imageData, faceBox, fps, faceDetectionSupported = true } = params;
   const brightness = computeBrightness(imageData);
   const blur = computeBlurScore(imageData);
 
   if (!faceBox) {
+    if (!faceDetectionSupported) {
+      // If the browser does not expose face detection API, avoid misleading
+      // geometry-related penalties and rely on global signal quality.
+      return {
+        brightness,
+        blur,
+        faceCoverage: 0.24,
+        headYawDeg: 0,
+        occlusion: 0.2,
+        fps,
+        faceSignal: "unsupported",
+      };
+    }
+
     return {
       brightness,
       blur,
@@ -74,6 +89,7 @@ export function buildQualityInput(params: {
       headYawDeg: 0,
       occlusion: 0.5,
       fps,
+      faceSignal: "not_detected",
     };
   }
 
@@ -90,6 +106,7 @@ export function buildQualityInput(params: {
     headYawDeg,
     occlusion,
     fps,
+    faceSignal: "detected",
   };
 }
 

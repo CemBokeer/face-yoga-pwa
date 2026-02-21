@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { buildQualityInput, expressionProxy } from "@/lib/camera/frame-analysis";
 import type { QualityInput, QualityScore } from "@/lib/domain/types";
-import { detectFace } from "@/lib/vision/browser-face";
+import { detectFace, isFaceDetectionSupported } from "@/lib/vision/browser-face";
 import { evaluateQuality } from "@/lib/vision/quality";
 
 interface CameraFrameEvent {
@@ -73,6 +73,7 @@ export function QualityCamera({ onFrame }: QualityCameraProps) {
     let frameTimer: ReturnType<typeof setInterval> | null = null;
     let lastTick = performance.now();
     let analyzing = false;
+    const faceDetectionSupported = isFaceDetectionSupported();
 
     const start = async () => {
       try {
@@ -124,6 +125,7 @@ export function QualityCamera({ onFrame }: QualityCameraProps) {
             const qualityInput = buildQualityInput({
               imageData,
               faceBox: face,
+              faceDetectionSupported,
               fps,
             });
             const currentScore = smoothQuality(evaluateQuality(qualityInput));

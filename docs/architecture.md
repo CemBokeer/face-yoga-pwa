@@ -6,6 +6,7 @@
    - Captures camera frames.
    - Computes frame quality signals (light, blur, face coverage, yaw, fps).
    - Produces expression proxy for movement scoring.
+   - Landmark evaluation foundation is prepared in `lib/vision/landmark-evaluator.ts`.
 
 2. `Calibration Engine`
    - Stores sampled frame metrics.

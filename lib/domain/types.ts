@@ -20,6 +20,7 @@ export interface QualityInput {
   headYawDeg: number;
   occlusion: number;
   fps: number;
+  faceSignal?: "detected" | "not_detected" | "unsupported";
 }
 
 export interface QualityScore {
